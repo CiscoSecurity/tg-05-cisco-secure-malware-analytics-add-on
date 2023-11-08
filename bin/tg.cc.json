@@ -1,0 +1,137 @@
+{
+    "global_settings": {
+        "logging": {
+            "level": "{{__settings__.logging.loglevel}}"
+        }, 
+        "proxy": {
+            "enabled": "{{__settings__.proxy.proxy_enabled}}", 
+            "password": "{{__settings__.proxy.proxy_password}}", 
+            "type": "{{__settings__.proxy.proxy_type}}", 
+            "host": "{{__settings__.proxy.proxy_url}}", 
+            "username": "{{__settings__.proxy.proxy_username}}", 
+            "rdns": "{{__settings__.proxy.proxy_rdns}}", 
+            "port": "{{__settings__.proxy.proxy_port}}"
+        }
+    }, 
+    "meta": {
+        "apiVersion": "1.0.0"
+    }, 
+    "tokens": [
+        "__settings__.logging.loglevel", 
+        "__settings__.proxy.proxy_enabled", 
+        "__settings__.proxy.proxy_url", 
+        "__settings__.proxy.proxy_port", 
+        "__settings__.proxy.proxy_type", 
+        "__settings__.proxy.proxy_username", 
+        "__settings__.proxy.proxy_rdns", 
+        "__settings__.proxy.proxy_password", 
+        "threat_grid_host", 
+        "api_key", 
+        "after"
+    ], 
+    "requests": [
+        {
+            "iteration_mode": {
+                "iteration_count": "100", 
+                "stop_conditions": [
+                    {
+                        "input": [
+                            "{{__response__.body}}", 
+                            "$.data.items[*].item"
+                        ], 
+                        "method": "json_empty"
+                    }
+                ]
+            }, 
+            "post_process": {
+                "pipeline": [
+                    {
+                        "input": [
+                            "{{__response__.body}}", 
+                            "$.data.items[0].item.submitted_at"
+                        ], 
+                        "output": "after", 
+                        "method": "json_path"
+                    }, 
+                    {
+                        "input": [
+                            "{{after != ''}}", 
+                            "The value of token 'after' extracted from response cannot be empty!"
+                        ], 
+                        "method": "assert_true"
+                    }, 
+                    {
+                        "input": [
+                            "{{after == _raw_after}}"
+                        ], 
+                        "method": "exit_if_true"
+                    }, 
+                    {
+                        "input": [
+                            "{{after}}"
+                        ], 
+                        "output": "_raw_after", 
+                        "method": "set_var"
+                    }, 
+                    {
+                        "input": [
+                            "{{__response__.body}}", 
+                            "$.data.items[*].item"
+                        ], 
+                        "output": "__stdout__", 
+                        "method": "json_path"
+                    }, 
+                    {
+                        "input": [
+                            "{{__stdout__}}", 
+                            "", 
+                            "{{index}}", 
+                            "{{host}}", 
+                            "{{source}}", 
+                            "{{sourcetype}}"
+                        ], 
+                        "output": "__stdout__", 
+                        "method": "splunk_xml"
+                    }, 
+                    {
+                        "input": [
+                            "{{__stdout__}}"
+                        ], 
+                        "method": "std_output"
+                    }
+                ], 
+                "skip_conditions": [
+                    {
+                        "input": [
+                            "{{__response__.body}}", 
+                            "$.data.items[*].item"
+                        ], 
+                        "method": "json_empty"
+                    }
+                ]
+            }, 
+            "request": {
+                "url": "https://{{threat_grid_host}}/api/v2/search/submissions?org_only=True&sort_by=submitted_at&sort_order=dsc&state=succ OR fail&limit=1000&after={{after}}&api_key={{api_key}}", 
+                "headers": {}, 
+                "method": "GET"
+            }, 
+            "checkpoint": {
+                "content": {
+                    "after": "{{_raw_after}}"
+                }
+            }, 
+            "pre_process": {
+                "pipeline": [
+                    {
+                        "input": [
+                            "{{after}}"
+                        ], 
+                        "output": "_raw_after", 
+                        "method": "set_var"
+                    }
+                ], 
+                "skip_conditions": []
+            }
+        }
+    ]
+}

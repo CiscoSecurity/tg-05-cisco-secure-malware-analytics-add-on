@@ -1,0 +1,1 @@
+{"validation": {"validators": ["best_practice_validation", "data_model_mapping_validation", "field_extract_validation", "app_cert_validation"], "status": "job_finished", "validation_id": "v_1636010444_82", "progress": 1.0}}
